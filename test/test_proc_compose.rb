@@ -32,4 +32,12 @@ class TestProcCompose < Test::Unit::TestCase
 
     assert_equal((g >> f ).call(1), f.call(g.call(1)))
   end
+
+  def test_symbol_compose
+    f = :upcase << :to_s
+    g = :to_s >> :upcase
+
+    assert_equal f.call(:foo), "FOO"
+    assert_equal g.call(:foo), "FOO"
+  end
 end
