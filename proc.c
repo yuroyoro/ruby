@@ -2943,6 +2943,104 @@ proc_curry(int argc, const VALUE *argv, VALUE self)
     return make_curry_proc(self, rb_ary_new(), arity);
 }
 
+static VALUE composed_proc(VALUE val, VALUE args);
+
+static VALUE
+make_composed_proc(VALUE self, VALUE other)
+{
+    VALUE args, proc;
+    rb_proc_t *procp;
+    int is_lambda;
+
+    args = rb_ary_new3(2, self, other);
+    rb_ary_freeze(args);
+
+    GetProcPtr(self, procp);
+    is_lambda = procp->is_lambda;
+
+    proc = rb_proc_new(composed_proc, args);
+    GetProcPtr(proc, procp);
+    procp->is_lambda = is_lambda;
+
+    return proc;
+}
+
+static VALUE
+composed_proc(VALUE val, VALUE args)
+{
+    VALUE self, other, val_args, res;
+
+    self  = RARRAY_PTR(args)[0];
+    other = RARRAY_PTR(args)[1];
+
+    val_args = rb_ary_new4(1, &val);
+
+    res = rb_proc_call(other, val_args);
+    return rb_proc_call(self, rb_ary_new4(1, &res));
+}
+
+static VALUE
+detect_proc_compose_target(VALUE other, VALUE block)
+{
+    VALUE target;
+
+    if (NIL_P(other) && rb_block_given_p()){
+        return block;
+    }
+    target = rb_check_convert_type(other, T_DATA, "Proc", "to_proc");
+
+    if (NIL_P(target) || !rb_obj_is_proc(target)) {
+        rb_raise(rb_eTypeError,
+            "wrong default_proc type %s (expected Proc)",
+             rb_obj_classname(other));
+    }
+
+    if (rb_block_given_p()){
+        rb_warn("given block not used");
+    }
+
+    return target;
+}
+
+ /*
+  *  call-seq:
+  *     prc.compose(other) -> a_proc
+  *     prc.compose{ ...}  -> a_proc
+  *
+  *  Returns a composed proc. g.compose(f) returns (g .f).
+  *     Proc.new{|x| g.call(f.call(x)) }
+  */
+static VALUE
+proc_compose(int argc, VALUE *argv, VALUE self)
+{
+    VALUE target, other, block;
+
+    rb_scan_args(argc, argv, "01&", &other, &block);
+    target = detect_proc_compose_target(other, block);
+
+    return make_composed_proc(self, target);
+}
+
+ /*
+  *  call-seq:
+  *     prc.and_then(other) -> a_proc
+  *     prc.and_then{ ...}  -> a_proc
+  *
+  *  Returns a composed proc. g.and_then(f) returns (f .g)
+  *     Proc.new{|x| f.call(g(x)) }
+  */
+static VALUE
+proc_and_then(int argc, VALUE *argv, VALUE self)
+{
+    VALUE other, target, block;
+
+    rb_scan_args(argc, argv, "01&", &other, &block);
+    target = detect_proc_compose_target(other, block);
+
+    return make_composed_proc(target, self);
+}
+
+
 /*
  *  call-seq:
  *     meth.curry        -> proc
@@ -3079,6 +3177,10 @@ Init_Proc(void)
     rb_define_method(rb_cProc, "curry", proc_curry, -1);
     rb_define_method(rb_cProc, "source_location", rb_proc_location, 0);
     rb_define_method(rb_cProc, "parameters", rb_proc_parameters, 0);
+    rb_define_method(rb_cProc, "compose", proc_compose, -1);
+    rb_define_alias(rb_cProc, "<<", "compose");
+    rb_define_method(rb_cProc, "and_then", proc_and_then, -1);
+    rb_define_alias(rb_cProc, ">>", "and_then");
 
     /* Exceptions */
     rb_eLocalJumpError = rb_define_class("LocalJumpError", rb_eStandardError);
