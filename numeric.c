@@ -4853,6 +4853,41 @@ rb_int_digits(int argc, VALUE *argv, VALUE num)
 }
 
 /*
+ *  Document-method: Integer#add.
+ *  call-seq:
+ *     int.add(base)  ->  Integer
+ *
+ *  returns integer added given integer `n` to self
+ *    1.add(2) #=> 3
+ *
+ */
+
+static VALUE
+rb_int_add(VALUE self, VALUE n)
+{
+    long lz;
+
+    if (FIXNUM_P(self) && FIXNUM_P(n)) {
+#ifdef HAVE_BUILTIN___BUILTIN_ADD_OVERFLOW
+        if (__builtin_add_overflow((long)a, (long)b-1, &lz)) {
+            return rb_int2big(rb_overflowed_fix_to_int(lz));
+        }
+        else {
+            return (VALUE)lz;
+        }
+#else
+        long a = FIX2LONG(self);
+        long b = FIX2LONG(n);
+
+        lz = a + b;
+        return LONG2NUM(lz);
+#endif
+    }
+
+    return rb_int_plus(self, n);
+}
+
+/*
  *  Document-method: Integer#upto
  *  call-seq:
  *     int.upto(limit) {|i| block }  ->  self
@@ -5448,6 +5483,7 @@ Init_Numeric(void)
     rb_define_method(rb_cInteger, "size", int_size, 0);
     rb_define_method(rb_cInteger, "bit_length", rb_int_bit_length, 0);
     rb_define_method(rb_cInteger, "digits", rb_int_digits, -1);
+    rb_define_method(rb_cInteger, "add", rb_int_add, 1);
 
 #ifndef RUBY_INTEGER_UNIFICATION
     rb_cFixnum = rb_cInteger;
