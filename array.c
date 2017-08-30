@@ -5903,6 +5903,24 @@ rb_ary_sum(int argc, VALUE *argv, VALUE ary)
 }
 
 /*
+ *  call-seq:
+ *     ary.second     ->   obj or nil
+ *
+ *  Returns the second lement of the array.
+ *  If the array is empty or only have one element, returns +nil+ .
+ *
+ *     a = [ "q", "r", "s", "t" ]
+ *     a.second     #=> "r"
+ *     ["q"].second #=> nil
+ */
+
+static VALUE
+rb_ary_second(VALUE self)
+{
+    return rb_ary_entry(self, 1);
+}
+
+/*
  *  Arrays are ordered, integer-indexed collections of any object.
  *
  *  Array indexing starts at 0, as in C or Java.  A negative index is assumed
@@ -6261,6 +6279,8 @@ Init_Array(void)
     rb_define_method(rb_cArray, "any?", rb_ary_any_p, 0);
     rb_define_method(rb_cArray, "dig", rb_ary_dig, -1);
     rb_define_method(rb_cArray, "sum", rb_ary_sum, -1);
+
+    rb_define_method(rb_cArray, "second", rb_ary_second, 0);
 
     id_random = rb_intern("random");
     id_div = rb_intern("div");
