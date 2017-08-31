@@ -10138,6 +10138,35 @@ rb_sym_to_proc(VALUE sym)
 
 /*
  * call-seq:
+ *   sym.to_compose_proc(other) -> a_proc
+ *   sym << other               -> a_proc
+ *
+ */
+static VALUE
+sym_compose(int argc, VALUE *argv, VALUE sym)
+{
+    VALUE proc;
+    proc = rb_sym_to_proc(sym);
+
+    return rb_funcall2(proc, rb_intern("compose"), argc, argv);
+}
+/*
+ * call-seq:
+ *   sym.to_and_then_proc(other) -> a_proc
+ *   sym >>  other                      -> a_proc
+ *
+ */
+static VALUE
+sym_and_then(int argc, VALUE *argv, VALUE sym)
+{
+    VALUE proc;
+    proc = rb_sym_to_proc(sym);
+
+    return rb_funcall2(proc, rb_intern("and_then"), argc, argv);
+}
+
+/*
+ * call-seq:
  *
  *   sym.succ
  *
@@ -10634,4 +10663,9 @@ Init_String(void)
     rb_define_method(rb_cSymbol, "swapcase", sym_swapcase, -1);
 
     rb_define_method(rb_cSymbol, "encoding", sym_encoding, 0);
+
+    rb_define_method(rb_cSymbol, "to_compose_proc", sym_compose, -1);
+    rb_define_alias(rb_cSymbol, "<<", "to_compose_proc");
+    rb_define_method(rb_cSymbol, "to_and_then", sym_and_then, -1);
+    rb_define_alias(rb_cSymbol, ">>", "to_and_then");
 }
